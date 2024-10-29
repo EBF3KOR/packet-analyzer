@@ -22,7 +22,7 @@ stages:
     steps:
     - task: Docker@2
       inputs:
-        containerRegistry: 'demo'
-        repository: 'tool'
+        containerRegistry: 'demo2'
+        repository: 'demo'
         command: 'buildAndPush'
-        Dockerfile: 'Dockerfile'
+        Dockerfile: '**/Dockerfile'
