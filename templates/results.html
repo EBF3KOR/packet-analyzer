@@ -140,7 +140,73 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
         }
+        table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 20px 0;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+        }
 
+        table:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        th {
+            background: linear-gradient(135deg, #2980b9, #2c3e50);
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #edf2f7;
+        }
+
+        /* Error styling for retransmission packets */
+        tr[style*="color:red"] {
+            color: #e74c3c;
+            background-color: rgba(231, 76, 60, 0.05);
+        }
+
+        tr[style*="color:red"]:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+
+        /* Responsive table */
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            th, td {
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
         img:hover {
             transform: scale(1.01);
         }
@@ -249,45 +315,45 @@
         .mt-4 { margin-top: 1rem; }
     </style>
     <script>
-        let currentOpenSection = null;
+                        let currentOpenSection = null;
 
-function toggleSidebarSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    const allButtons = document.querySelectorAll('.navbar button');
-    
-    // Remove active class from all buttons
-    allButtons.forEach(button => {
-        if (button.textContent.toLowerCase().includes(sectionId.toLowerCase())) {
-            button.classList.toggle('active');
-        } else {
-            button.classList.remove('active');
-        }
-    });
+                function toggleSidebarSection(sectionId) {
+                    const section = document.getElementById(sectionId);
+                    const allButtons = document.querySelectorAll('.navbar button');
+                    
+                    // Remove active class from all buttons
+                    allButtons.forEach(button => {
+                        if (button.textContent.toLowerCase().includes(sectionId.toLowerCase())) {
+                            button.classList.toggle('active');
+                        } else {
+                            button.classList.remove('active');
+                        }
+                    });
 
-    if (currentOpenSection && currentOpenSection !== section) {
-        currentOpenSection.style.display = 'none';
-    }
+                    if (currentOpenSection && currentOpenSection !== section) {
+                        currentOpenSection.style.display = 'none';
+                    }
 
-    section.style.display = section.style.display === 'none' || section.style.display === '' ? 'block' : 'none';
-    currentOpenSection = section.style.display === 'block' ? section : null;
+                    section.style.display = section.style.display === 'none' || section.style.display === '' ? 'block' : 'none';
+                    currentOpenSection = section.style.display === 'block' ? section : null;
 
-    // Add animation class
-    if (section.style.display === 'block') {
-        section.classList.add('fade-in');
-    }
-}
+                    // Add animation class
+                    if (section.style.display === 'block') {
+                        section.classList.add('fade-in');
+                    }
+                }
 
-function toggleSection(sectionId, button) {
-    const section = document.getElementById(sectionId);
-    if (section.style.display === 'none' || section.style.display === '') {
-        section.style.display = 'block';
-        button.textContent = button.textContent.replace('Show', 'Hide');
-        section.classList.add('fade-in');
-    } else {
-        section.style.display = 'none';
-        button.textContent = button.textContent.replace('Hide', 'Show');
-    }
-}
+                function toggleSection(sectionId, button) {
+                    const section = document.getElementById(sectionId);
+                    if (section.style.display === 'none' || section.style.display === '') {
+                        section.style.display = 'block';
+                        button.textContent = button.textContent.replace('Show', 'Hide');
+                        section.classList.add('fade-in');
+                    } else {
+                        section.style.display = 'none';
+                        button.textContent = button.textContent.replace('Hide', 'Show');
+                    }
+                }
        
             function toggleInactivityGaps() {
                 const gapsSection = document.getElementById('inactivity_gaps');
@@ -301,6 +367,30 @@ function toggleSection(sectionId, button) {
                 }
             }
 
+            function toggleretransmissionGaps() {
+                const retransmissionSection = document.getElementById('Retrasmission');
+                const button = document.getElementById('toggleretransmissionButton');
+                
+                if (retransmissionSection.style.display === 'none') {
+                    retransmissionSection.style.display = 'block';
+                    button.textContent = 'Hide Retransmission Packets';
+                } else {
+                    retransmissionSection.style.display = 'none';
+                    button.textContent = 'Show Retransmission Packets';
+                }
+            }    
+            function toggleduplicate() {
+                const duplicate = document.getElementById('Duplicates');
+                const button = document.getElementById('toggleDuplicateButton');
+                
+                if (duplicate.style.display === 'none') {
+                    duplicate.style.display = 'block';
+                    button.textContent = 'Hide Duplicate Packets';
+                } else {
+                    duplicate.style.display = 'none';
+                    button.textContent = 'Show DuplicatePackets';
+                }
+            }  
         function toggleHeatmap() {
                 const heatmap = document.getElementById('plot_heatmap');
                 if (heatmap.style.display === 'none') {
@@ -328,9 +418,11 @@ function toggleSection(sectionId, button) {
         <button onclick="toggleSidebarSection('network_graph')">Network Graph</button>
         <button onclick="toggleSidebarSection('counts')">Counts</button>
         <button onclick="toggleSidebarSection('io_graph')">IO Graph</button>
+        <button onclick="toggleSidebarSection('packets_analysis')">Packet Analysis</button>
         <button onclick="toggleSidebarSection('Bandwidth Analysis')">Bandwidth Analysis</button>
         <button onclick="toggleSidebarSection('tcp_latencies')">TCP Latencies</button>
         <button onclick="toggleSidebarSection('Window Size Analysis')">Window Size Analysis</button>
+
         <button>
             <a href="/" style="color: white; text-decoration: none;">Upload another file</a>
         </button>
@@ -424,7 +516,78 @@ function toggleSection(sectionId, button) {
                 </div>
             {% endif %}
         </div>
+        <div id="packets_analysis" class="info-section fade-in">
+            <button id="toggleretransmissionButton" onclick="toggleretransmissionGaps()">
+                Show Retransmission Packets
+            </button>
+            <button id="toggleDuplicateButton" onclick="toggleduplicate()">
+                Show Duplicate Packets
+            </button>
+            
+            <div id="Retrasmission" style="display: none; margin-top: 20px;">
+                <h2>Retransmission Packets</h2>
+                {% if retransmission_packets|length > 0 %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Src</th>
+                            <th>Dst</th>
+                            <th>Seq</th>
+                            <th>Ack</th>
+                            <th>Flags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for packet in retransmission_packets %}
+                            <tr style="color:red;">
+                                <td>{{ packet.Datetime }}</td>
+                                <td>{{ packet.src }}</td>
+                                <td>{{ packet.dst }}</td>
+                                <td>{{ packet.seq }}</td>
+                                <td>{{ packet.ack }}</td>
+                                <td>{{ packet.flags }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p style="color: green;">No retransmitted packets found.</p>
+                {% endif %}
+            </div>
         
+            <div id="Duplicates" style="display: none; margin-top: 20px;">
+                <h2>Duplicate Packets</h2>
+                {% if duplicate_packets|length > 0 %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Src</th>
+                            <th>Dst</th>
+                            <th>Seq</th>
+                            <th>Ack</th>
+                            <th>Flags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for packet in duplicate_packets %}
+                            <tr style="color:red;">
+                                <td>{{ packet.Datetime }}</td>
+                                <td>{{ packet.src }}</td>
+                                <td>{{ packet.dst }}</td>
+                                <td>{{ packet.seq }}</td>
+                                <td>{{ packet.ack }}</td>
+                                <td>{{ packet.flags }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p style="color: green;">No duplicate packets found.</p>
+                {% endif %}
+            </div>
+        </div>
         <div id="Bandwidth Analysis" class="info-section fade-in">  
             {% if bandwidth1 %}
                 <h2>Bandwidth Analysis</h2>

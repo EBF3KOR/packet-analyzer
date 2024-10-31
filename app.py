@@ -3,6 +3,7 @@ from flask_cors import CORS
 from scapy.all import rdpcap, IP, TCP, UDP, Ether, IPv6
 import pandas as pd
 import numpy as np
+import pytz
 import matplotlib
 matplotlib.use('Agg')  
 import matplotlib.pyplot as plt
@@ -125,7 +126,12 @@ def process_packets(packets):
     # Drop the 'options' column if it exists
     if 'options' in df.columns:
         df.drop(columns=['options'], inplace=True)
+    
+    # Define IST timezone
+    ist = pytz.timezone('Asia/Kolkata')
 
+    # Convert the 'Datetime' column from UTC to IST
+    df['Datetime'] = df['Datetime'].dt.tz_localize('UTC').dt.tz_convert(ist)
     return df
 def plot_network_graph(df):
     # Filter out rows with NaN in 'src' or 'dst'
@@ -252,7 +258,66 @@ def identify_inactivity_gaps(df, threshold_seconds=2):
     threshold = pd.Timedelta(seconds=threshold_seconds)
     gaps = df_sorted[df_sorted['time_diff'] > threshold]
     return gaps[['Datetime', 'time_diff']]
- 
+
+
+def mark_retransmissions_with_set(df):
+    # Create a new column to mark retransmissions
+    df['is_retransmission'] = False
+    
+    # Create a set to track seen packets
+    seen_packets = set()
+    
+    # Iterate through the DataFrame to identify retransmissions
+    for i, row in df.iterrows():
+        packet_id = (row['sport'], row['dport'], row['seq'], row['ack'], row['flags'])
+        
+        if packet_id in seen_packets:
+            df.at[i, 'is_retransmission'] = True
+        else:
+            seen_packets.add(packet_id)
+    
+    # Return the DataFrame with retransmission info
+    return df
+
+def mark_duplicate_packets(df):
+   # Create a column to mark duplicate packets
+   df['is_duplicate'] = False
+   
+   # Dictionary to track packets
+   # Key will be the combination of fields that should be same
+   seen_packets = dict()
+   
+   # Iterate through DataFrame
+   for i, row in df.iterrows():
+       # Create tuple of fields that should match
+       packet_id = (
+           row['sport'],      # same source port
+           row['dport'],      # same destination port
+           row['ack'],          # same ACK
+           row['window']        # same window size
+       )
+       
+       if packet_id in seen_packets:
+           # Get previous packet info
+           prev_packet = seen_packets[packet_id]
+           
+           # Check conditions for duplicate:
+           # 1. Different sequence number
+           # 2. Different flags
+           # 3. All other fields in packet_id are already matched
+           if (row['seq'] != prev_packet['seq'] and 
+               row['flags'] != prev_packet['flags']):
+               df.at[i, 'is_duplicate'] = True
+               
+       else:
+           # Store current packet info
+           seen_packets[packet_id] = {
+               'seq': row['seq'],
+               'flags': row['flags']
+           }
+   
+   return df
+
 # Function to calculate bandwidth
 def calculate_bandwidth(df,devices, link_capacity_mbps=100):
     
@@ -519,6 +584,14 @@ def upload_file():
         plot_heatmap=plot_communication_heatmap(df)
         io_graph=plot_packet_io_graph(df)
         inactivity_gaps = identify_inactivity_gaps(df)
+        df = mark_retransmissions_with_set(df)
+        retransmission_packets=df[df['is_retransmission']==True]
+        retransmission_packets=retransmission_packets[retransmission_packets['flags']!='R']
+        df=mark_duplicate_packets(df)
+        duplicate_packets = df[
+                                    (df['is_duplicate'] == True) 
+                              ]
+        duplicate_packets =duplicate_packets[duplicate_packets['flags'].str.contains('F', na=False) ]
         bandwidth = calculate_bandwidth(df,devices=len(device_ips))
         efficiency = calculate_efficiency(df)
         tcp_latencies = analyze_tcp_latencies(df)
@@ -533,6 +606,8 @@ def upload_file():
                                source_counts=source_counts.to_dict(orient='records'),
                                destination_counts=destination_counts.to_dict(orient='records'),
                                inactivity_gaps=inactivity_gaps.to_dict(orient='records'),
+                               retransmission_packets= retransmission_packets.to_dict(orient='records'),
+                               duplicate_packets=duplicate_packets.to_dict(orient='records'),
                                bandwidth1=bandwidth,
                                efficiency=efficiency,
                                tcp_latencies=tcp_latencies,
