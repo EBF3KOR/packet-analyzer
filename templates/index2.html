@@ -279,76 +279,45 @@ def mark_retransmissions_with_set(df):
     # Return the DataFrame with retransmission info
     return df
 
-def identify_duplicate_packets(df):
+def mark_duplicate_packets(df):
+   # Create a column to mark duplicate packets
+   df['is_duplicate'] = False
    
-    result_df = df.copy()
-    
-    # Initialize duplicate flags
-    result_df['is_tcp_retransmission'] = False
-    result_df['is_tcp_dup_ack'] = False
-    result_df['is_duplicate_packet'] = False
-    
-    # Convert time to float if it's not already
-    result_df['time'] = result_df['time'].astype(float)
-    
-    # Process TCP packets
-    tcp_packets = result_df[result_df['Protocol'] == 'TCP'].copy()
-    
-    if not tcp_packets.empty:
-        # Sort by time to maintain temporal order
-        tcp_packets = tcp_packets.sort_values('time')
-        
-        # Group by connection tuple
-        connections = tcp_packets.groupby(['src', 'dst', 'sport', 'dport'])
-        
-        for _, connection in connections:
-            connection = connection.sort_values('time')
-            
-            for i in range(1, len(connection)):
-                current = connection.iloc[i]
-                previous = connection.iloc[i-1]
-                
-                
-                
-                # Check for duplicate ACKs
-                # Conditions:
-                # 1. Same ACK number
-                # 2. Zero payload length
-                # 3. Different sequence numbers
-                if (current['ack'] == previous['ack'] and
-                    current['payload_length'] == 0 and
-                    current['seq'] != previous['seq']):
-                    result_df.loc[current.name, 'is_tcp_dup_ack'] = True
-                
-                # Check for exact duplicate packets
-                # Conditions:
-                # 1. Same everything except time
-                if (current['seq'] == previous['seq'] and
-                    current['ack'] == previous['ack'] and
-                    current['payload_length'] == previous['payload_length'] and
-                    current['flags'] == previous['flags'] and
-                    current['payload'] == previous['payload']):
-                    result_df.loc[current.name, 'is_duplicate_packet'] = True
-    
-    # Calculate statistics
-    '''stats = {
-        'total_packets': len(df),
-        'tcp_packets': len(df[df['Protocol'] == 'TCP']),
-        'tcp_retransmissions': result_df['is_tcp_retransmission'].sum(),
-        'tcp_dup_acks': result_df['is_tcp_dup_ack'].sum(),
-        'exact_duplicates': result_df['is_duplicate_packet'].sum()
-    }
-    
-    # Add percentage calculations
-    if stats['tcp_packets'] > 0:
-        stats['retransmission_percentage'] = (stats['tcp_retransmissions'] / stats['tcp_packets']) * 100
-        stats['dup_ack_percentage'] = (stats['tcp_dup_acks'] / stats['tcp_packets']) * 100
-    else:
-        stats['retransmission_percentage'] = 0
-        stats['dup_ack_percentage'] = 0
-    '''
-    return result_df
-
+   # Dictionary to track packets
+   # Key will be the combination of fields that should be same
+   seen_packets = dict()
+   
+   # Iterate through DataFrame
+   for i, row in df.iterrows():
+       # Create tuple of fields that should match
+       packet_id = (
+           row['sport'],      # same source port
+           row['dport'],      # same destination port
+           row['ack'],          # same ACK
+           row['window']        # same window size
+       )
+       
+       if packet_id in seen_packets:
+           # Get previous packet info
+           prev_packet = seen_packets[packet_id]
+           
+           # Check conditions for duplicate:
+           # 1. Different sequence number
+           # 2. Different flags
+           # 3. All other fields in packet_id are already matched
+           if (row['seq'] != prev_packet['seq'] and 
+               row['flags'] != prev_packet['flags']):
+               df.at[i, 'is_duplicate'] = True
+               
+       else:
+           # Store current packet info
+           seen_packets[packet_id] = {
+               'seq': row['seq'],
+               'ack': row['ack'],
+               'flags': row['flags']
+           }
+   
+   return df
 
 # Function to calculate bandwidth
 def calculate_bandwidth(df,devices, link_capacity_mbps=100):
@@ -619,8 +588,10 @@ def upload_file():
         df = mark_retransmissions_with_set(df)
         retransmission_packets=df[df['is_retransmission']==True]
         retransmission_packets=retransmission_packets[retransmission_packets['flags']!='R']
-        df= identify_duplicate_packets(df)
-        duplicate_packets = df[df['is_duplicate_packet']==True]
+        df=mark_duplicate_packets(df)
+        duplicate_packets = df[
+                                    (df['is_duplicate'] == True) 
+                              ]
         duplicate_packets =duplicate_packets[duplicate_packets['flags'].str.contains('F', na=False) ]
         bandwidth = calculate_bandwidth(df,devices=len(device_ips))
         efficiency = calculate_efficiency(df)

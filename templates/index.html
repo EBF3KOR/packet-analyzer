@@ -17,7 +17,7 @@
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             min-height: 100vh;
             margin: 0;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("uploads\\images.jpg");
+            background-image: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)), url("uploads\\images.jpg");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -166,14 +166,62 @@
             animation: shake 0.5s ease-in-out;
         }
 
+        /* Loading State Styles */
+        .loading-state {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .loading-header {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .loading-subtext {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .progress-container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            height: 4px;
+            border-radius: 2px;
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 30%;
+            height: 100%;
+            background: linear-gradient(90deg, #2980b9, #64b5f6);
+            border-radius: 2px;
+            animation: progressMove 2s infinite;
+            transform-origin: left;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 1rem;
+            font-family: monospace;
+        }
+
         /* Animations */
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         @keyframes formSlideUp {
@@ -211,21 +259,20 @@
         }
 
         @keyframes gradientMove {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-10px); }
             75% { transform: translateX(10px); }
+        }
+
+        @keyframes progressMove {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
         }
 
         /* Responsive Design */
@@ -245,28 +292,46 @@
             .file-upload {
                 height: 150px;
             }
+
+            .loading-header {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Upload Network Data</h1>
-        <form action="/upload" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
-            <div class="file-upload">
-                <input type="file" name="file" id="file" required>
-                <label for="file">
-                    Drop your PCAP file here
-                    <span>or click to browse</span>
-                </label>
+        <div id="upload-section">
+            <h1>Upload Network Data</h1>
+            <form action="/upload" method="post" enctype="multipart/form-data" id="upload-form">
+                <div class="file-upload">
+                    <input type="file" name="file" id="file" required>
+                    <label for="file">
+                        Drop your PCAP file here
+                        <span>or click to browse</span>
+                    </label>
+                </div>
+                <button type="submit" class="submit-btn">Upload</button>
+            </form>
+            
+            {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div id="loading-section" class="loading-state">
+            <div class="loading-header">Network Analysis in Progress</div>
+            <div class="loading-subtext">
+                Processing PCAP file and analyzing network traffic patterns.
+                This process may take a few moments.
             </div>
-            <button type="submit" class="submit-btn">Upload</button>
-        </form>
-        
-        {% if error %}
-            <div class="error-message">
-                {{ error }}
+            <div class="progress-container">
+                <div class="progress-bar"></div>
             </div>
-        {% endif %}
+            <div class="status-text" id="status-text">Initializing analysis engine...</div>
+        </div>
     </div>
     
     <script>
@@ -292,7 +357,35 @@
             return true;
         }
 
-        // Add drag and drop visual feedback
+        // Handle form submission
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (validateForm()) {
+                // Hide upload section
+                document.getElementById('upload-section').style.display = 'none';
+                // Show loading section
+                document.getElementById('loading-section').style.display = 'block';
+                
+                // Simulate analysis steps with status updates
+                const statusElement = document.getElementById('status-text');
+                const statusMessages = [
+                    
+                    'Generating network insights...'
+                ];
+                
+                let messageIndex = 0;
+                const statusInterval = setInterval(() => {
+                    messageIndex = (messageIndex + 1) % statusMessages.length;
+                    statusElement.textContent = statusMessages[messageIndex];
+                }, 3000);
+                
+                // Submit the form
+                this.submit();
+            }
+        });
+
+        // Drag and drop functionality
         const dropZone = document.querySelector('.file-upload');
         
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {

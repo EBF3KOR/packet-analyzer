@@ -517,77 +517,77 @@
             {% endif %}
         </div>
         <div id="packets_analysis" class="info-section fade-in">
-            <button id="toggleretransmissionButton" onclick="toggleretransmissionGaps()">
-                Show Retransmission Packets
-            </button>
-            <button id="toggleDuplicateButton" onclick="toggleduplicate()">
-                Show Duplicate Packets
-            </button>
-            
-            <div id="Retrasmission" style="display: none; margin-top: 20px;">
-                <h2>Retransmission Packets</h2>
-                {% if retransmission_packets|length > 0 %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Src</th>
-                            <th>Dst</th>
-                            <th>Seq</th>
-                            <th>Ack</th>
-                            <th>Flags</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for packet in retransmission_packets %}
-                            <tr style="color:red;">
-                                <td>{{ packet.Datetime }}</td>
-                                <td>{{ packet.src }}</td>
-                                <td>{{ packet.dst }}</td>
-                                <td>{{ packet.seq }}</td>
-                                <td>{{ packet.ack }}</td>
-                                <td>{{ packet.flags }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                    <p style="color: green;">No retransmitted packets found.</p>
-                {% endif %}
-            </div>
-        
-            <div id="Duplicates" style="display: none; margin-top: 20px;">
-                <h2>Duplicate Packets</h2>
-                {% if duplicate_packets|length > 0 %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Src</th>
-                            <th>Dst</th>
-                            <th>Seq</th>
-                            <th>Ack</th>
-                            <th>Flags</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for packet in duplicate_packets %}
-                            <tr style="color:red;">
-                                <td>{{ packet.Datetime }}</td>
-                                <td>{{ packet.src }}</td>
-                                <td>{{ packet.dst }}</td>
-                                <td>{{ packet.seq }}</td>
-                                <td>{{ packet.ack }}</td>
-                                <td>{{ packet.flags }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                    <p style="color: green;">No duplicate packets found.</p>
-                {% endif %}
-            </div>
-        </div>
+    <button id="toggleretransmissionButton" onclick="toggleretransmissionGaps()">
+        Show Retransmission Packets
+    </button>
+    <button id="toggleDuplicateButton" onclick="toggleduplicate()">
+        Show Duplicate Packets
+    </button>
+    
+    <div id="Retrasmission" style="display: none; margin-top: 20px;">
+        <h2>Retransmission Packets</h2>
+        {% if retransmission_packets|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Src</th>
+                    <th>Dst</th>
+                    <th>Seq</th>
+                    <th>Ack</th>
+                    <th>Flags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for packet in retransmission_packets %}
+                    <tr style="color:red;">
+                        <td>{{ packet.Datetime }}</td>
+                        <td>{{ packet.src }}</td>
+                        <td>{{ packet.dst }}</td>
+                        <td>{{ packet.seq }}</td>
+                        <td>{{ packet.ack }}</td>
+                        <td>{{ packet.flags }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p style="color: green;">No retransmitted packets found.</p>
+        {% endif %}
+    </div>
+
+    <div id="Duplicates" style="display: none; margin-top: 20px;">
+        <h2>Duplicate Packets</h2>
+        {% if duplicate_packets|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Src</th>
+                    <th>Dst</th>
+                    <th>Seq</th>
+                    <th>Ack</th>
+                    <th>Flags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for packet in duplicate_packets %}
+                    <tr style="color:red;">
+                        <td>{{ packet.Datetime }}</td>
+                        <td>{{ packet.src }}</td>
+                        <td>{{ packet.dst }}</td>
+                        <td>{{ packet.seq }}</td>
+                        <td>{{ packet.ack }}</td>
+                        <td>{{ packet.flags }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p style="color: green;">No duplicate packets found.</p>
+        {% endif %}
+    </div>
+</div>
         <div id="Bandwidth Analysis" class="info-section fade-in">  
             {% if bandwidth1 %}
                 <h2>Bandwidth Analysis</h2>
