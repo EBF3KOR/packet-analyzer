@@ -565,6 +565,133 @@ def window_size_analysis_Devices(df, device_ips, output_dir='uploads/'):
             analysis_results[device]['plot'] = plot_filename
 
     return analysis_results
+
+def analyze_tcp_flags(df):
+    """
+    Analyzes TCP flags to identify connection patterns and potential issues.
+    """
+    tcp_df = df[df['Protocol'] == 'TCP'].copy()
+    
+    # Initialize counters for different types of connections
+    analysis = {
+        'total_connections': 0,
+        'successful_connections': 0,
+        'failed_connections': 0,
+        'reset_connections': 0,
+        'incomplete_connections': 0,
+        'suspicious_patterns': []
+    }
+    
+    # Group by source-destination pairs
+    connections = tcp_df.groupby(['src', 'dst'])
+    
+    for _, connection in connections:
+        analysis['total_connections'] += 1
+        flags_sequence = connection['flags'].tolist()
+        
+        # Check for complete 3-way handshake (SYN -> SYN-ACK -> ACK)
+        if any('S' in str(f) for f in flags_sequence) and \
+           any('SA' in str(f) for f in flags_sequence) and \
+           any(f == 'A' for f in flags_sequence):
+            analysis['successful_connections'] += 1
+            
+        # Check for reset connections
+        if any('R' in str(f) for f in flags_sequence):
+            analysis['reset_connections'] += 1
+            
+        # Check for failed connection attempts
+        if any('S' in str(f) for f in flags_sequence) and not any('SA' in str(f) for f in flags_sequence):
+            analysis['failed_connections'] += 1
+            
+        # Check for incomplete connections
+        if any('S' in str(f) for f in flags_sequence) and not any('F' in str(f) for f in flags_sequence):
+            analysis['incomplete_connections'] += 1
+            
+        # Identify suspicious patterns
+        if len(flags_sequence) > 10 and all(f == 'S' for f in flags_sequence):
+            analysis['suspicious_patterns'].append({
+                'src': connection['src'].iloc[0],
+                'dst': connection['dst'].iloc[0],
+                'pattern': 'Possible SYN flood attack'
+            })
+            
+    # Structure the results in a format suitable for rendering in HTML
+    html_results = {
+        'total_connections': analysis['total_connections'],
+        'successful_connections': analysis['successful_connections'],
+        'failed_connections': analysis['failed_connections'],
+        'reset_connections': analysis['reset_connections'],
+        'incomplete_connections': analysis['incomplete_connections'],
+        'suspicious_patterns': analysis['suspicious_patterns']
+    }
+    
+    return html_results
+
+def analyze_protocol_distribution(df):
+    """
+    Analyzes the distribution of protocols and their usage patterns.
+    """
+    protocol_stats = {
+        'protocol_counts': df['Protocol'].value_counts().to_dict(),
+        'protocol_bytes': df.groupby('Protocol')['data_length'].sum().to_dict(),
+        'protocol_trends': {}
+    }
+    
+    # Analyze temporal trends
+    df['hour'] = df['Datetime'].dt.hour
+    hourly_protocols = df.groupby(['hour', 'Protocol']).size().unstack(fill_value=0)
+    protocol_stats['hourly_distribution'] = hourly_protocols.to_dict()
+    
+    return protocol_stats
+
+
+
+
+def calculate_network_metrics(df):
+    """
+    Calculates various network performance metrics.
+    """
+    metrics = {
+        'overall_metrics': {},
+        'per_protocol_metrics': {},
+        'time_based_metrics': {}
+    }
+    
+    # Overall metrics
+    total_duration = (df['Datetime'].max() - df['Datetime'].min()).total_seconds()
+    metrics['overall_metrics'] = {
+        'total_packets': len(df),
+        'total_bytes': df['payload_length'].sum(),
+        'packets_per_second': len(df) / total_duration if total_duration > 0 else 0,
+        'bytes_per_second': df['payload_length'].sum() / total_duration if total_duration > 0 else 0,
+        'unique_hosts': len(set(df['src'].unique()) | set(df['dst'].unique()))
+    }
+    
+    # Per-protocol metrics
+    for protocol in df['Protocol'].unique():
+        proto_df = df[df['Protocol'] == protocol]
+        metrics['per_protocol_metrics'][protocol] = {
+            'packet_count': len(proto_df),
+            'byte_count': proto_df['payload_length'].sum(),
+            'percentage': (len(proto_df) / len(df)) * 100,
+            'average_packet_size': proto_df['payload_length'].mean()
+        }
+    
+    # Time-based metrics (hourly)
+    df['hour'] = df['Datetime'].dt.hour
+    hourly_stats = df.groupby('hour').agg({
+        'data_length': ['count', 'sum', 'mean'],
+        'Protocol': 'nunique'
+    })
+    
+    metrics['time_based_metrics'] = {
+        'peak_hour': hourly_stats['data_length']['count'].idxmax(),
+        'quiet_hour': hourly_stats['data_length']['count'].idxmin(),
+        'hourly_packet_counts': hourly_stats['data_length']['count'].to_dict(),
+        'hourly_data_volumes': hourly_stats['data_length']['sum'].to_dict()
+    }
+    
+    return metrics
 # Homepage route
 app = Flask(__name__)
 CORS(app)
@@ -609,6 +736,7 @@ def upload_file():
         
         plot_path = plot_network_graph(df)
         source_counts, destination_counts = count_ip_protocols(df)
+        calculate_network_metric=calculate_network_metrics(df)
         device_ips=identify_device_ips(df)
         drives=identify_drives(df)
         device_ips = device_ips.tolist() 
@@ -629,11 +757,13 @@ def upload_file():
         inactivity_gaps['time_diff'] = inactivity_gaps['time_diff'].dt.total_seconds()
         bandwidth_graph=visual_bandwidth(bandwidth['Actual Bandwidth Used (Mbps)'],bandwidth['Available Bandwidth (Mbps)'])
         bandwidth_df = calculate_ipv4_bandwidth(df,bandwidth['Available Bandwidth (Mbps)'])
+        analyze_tcp_flag=analyze_tcp_flags(df)
          
         window_analysis_results = window_size_analysis_Devices(df, identify_drives(df))
         # Pass results back to the index page
         return render_template('results.html',
                                source_counts=source_counts.to_dict(orient='records'),
+                                network_metrics=calculate_network_metric,
                                destination_counts=destination_counts.to_dict(orient='records'),
                                inactivity_gaps=inactivity_gaps.to_dict(orient='records'),
                                retransmission_packets= retransmission_packets.to_dict(orient='records'),
@@ -649,7 +779,8 @@ def upload_file():
                                 io_graph=io_graph,
                                 bandwidth_graph=bandwidth_graph,
                                 bandwidth_data=bandwidth_df.to_dict(orient='records'),
-                                window_analysis_results=window_analysis_results) 
+                                window_analysis_results=window_analysis_results,
+                                tcp_flags_analysis=analyze_tcp_flag) 
     else:
         return render_template('index.html', error="Invalid file format, please upload a PCAP file")
 

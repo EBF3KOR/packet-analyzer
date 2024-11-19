@@ -313,6 +313,23 @@
         .text-center { text-align: center; }
         .mb-4 { margin-bottom: 1rem; }
         .mt-4 { margin-top: 1rem; }
+
+
+        #protocolTable {
+            display: none;
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid black;
+        }
+        #protocolTable th, #protocolTable td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        #protocolTable th {
+            background-color: #f2f2f2;
+        }
     </style>
     <script>
                         let currentOpenSection = null;
@@ -399,6 +416,7 @@
                     heatmap.style.display = 'none';
                 }
             }
+            
         function toggleOutliers(button) {
             const outlierList = document.getElementById('outlierList');
             
@@ -411,12 +429,23 @@
                 button.textContent = 'Show List of Outliers';
             }
         }
+        function toggleTCPAnalysis() {
+            const analysisSection = document.getElementById('TCPFlagAnalysis');
+            if (analysisSection.classList.contains('visible')) {
+                analysisSection.classList.remove('visible');
+                analysisSection.style.display = 'none';
+            } else {
+                analysisSection.classList.add('visible');
+                analysisSection.style.display = 'block';
+            }
+        }
+    </script>
     </script>
 </head>
 <body>
     <div class="navbar">
         <button onclick="toggleSidebarSection('network_graph')">Network Graph</button>
-        <button onclick="toggleSidebarSection('counts')">Counts</button>
+        <button onclick="toggleSidebarSection('First Level Analysis')">First Level Analysis</button>
         <button onclick="toggleSidebarSection('io_graph')">IO Graph</button>
         <button onclick="toggleSidebarSection('packets_analysis')">Packet Analysis</button>
         <button onclick="toggleSidebarSection('Bandwidth Analysis')">Bandwidth Analysis</button>
@@ -457,34 +486,103 @@
             {% endif %}
         </div>
         
-        <div id="counts" class="info-section fade-in">
-            <div style="display: flex; justify-content: space-around; margin-top: 20px; border: 1px solid black;">
-                <div style="flex: 1; margin-right: 20px;">
-                    {% if source_counts %}
-                        <h2>Source Protocol Counts</h2>
+        <div id="First Level Analysis" class="info-section fade-in">
+     
+            
+                {% if network_metrics %}
+                    <h2>Network Metrics</h2>
+
+                    <h3>Overall Metrics</h3>
+                    <p><strong>Total Packets:</strong> {{ network_metrics['overall_metrics']['total_packets'] }}</p>
+                    <p><strong>Total Bytes:</strong> {{ network_metrics['overall_metrics']['total_bytes'] }}</p>
+                    <p><strong>Packets Per Second:</strong> {{ network_metrics['overall_metrics']['packets_per_second'] }}</p>
+                    <p><strong>Bytes Per Second:</strong> {{ network_metrics['overall_metrics']['bytes_per_second'] }}</p>
+                    <p><strong>Unique Hosts:</strong> {{ network_metrics['overall_metrics']['unique_hosts'] }}</p>
+
+                    <h3>Per-Protocol Metrics</h3>
+                    {% if network_metrics['per_protocol_metrics'] %}
                         <ul>
-                            {% for count in source_counts %}
-                                <li>{{ count.src }}: {{ count.Protocol }} : <strong>{{ count.count }}</strong></li>
+                            {% for protocol, metrics in network_metrics['per_protocol_metrics'].items() %}
+                                <li>
+                                    <strong>Protocol:</strong> {{ protocol }}
+                                    <ul>
+                                        <li>Packet Count: {{ metrics['packet_count'] }}</li>
+                                        <li>Byte Count: {{ metrics['byte_count'] }}</li>
+                                        <li>Percentage: {{ metrics['percentage'] }}%</li>
+                                        <li>Average Packet Size: {{ metrics['average_packet_size'] }}</li>
+                                    </ul>
+                                </li>
                             {% endfor %}
                         </ul>
+                    {% else %}
+                        <p>No protocol-specific data available.</p>
                     {% endif %}
-                </div>
-                
-                <div style="flex: 1; margin-left: 20px;">
-                    {% if destination_counts %}
-                        <h2>Destination Protocol Counts</h2>
+
+                    <h3>Time-Based Metrics</h3>
+                    <p><strong>Peak Hour:</strong> {{ network_metrics['time_based_metrics']['peak_hour'] }}</p>
+                    <p><strong>Quiet Hour:</strong> {{ network_metrics['time_based_metrics']['quiet_hour'] }}</p>
+
+                    <h4>Hourly Packet Counts</h4>
+                    {% if network_metrics['time_based_metrics']['hourly_packet_counts'] %}
                         <ul>
-                            {% for count in destination_counts %}
-                                <li>{{ count.dst }}: {{ count.Protocol }} : <strong>{{ count.count }}</strong></li>
+                            {% for hour, count in network_metrics['time_based_metrics']['hourly_packet_counts'].items() %}
+                                <li>Hour {{ hour }}: {{ count }} packets</li>
                             {% endfor %}
                         </ul>
+                    {% else %}
+                        <p>No hourly packet data available.</p>
                     {% endif %}
-                </div>
-            </div>
-        
-            <!-- Button to visualize the heatmap -->
-            <button id="visualizeButton" onclick="toggleHeatmap()">Visualize Heatmap</button>
-        
+
+                    <h4>Hourly Data Volumes</h4>
+                    {% if network_metrics['time_based_metrics']['hourly_data_volumes'] %}
+                        <ul>
+                            {% for hour, volume in network_metrics['time_based_metrics']['hourly_data_volumes'].items() %}
+                                <li>Hour {{ hour }}: {{ volume }} bytes</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No hourly data volume available.</p>
+                    {% endif %}
+                {% else %}
+                    <p>No network metrics available.</p>
+                {% endif %}
+          
+            <button id="showTableButton">Show Protocol Table</button>
+                  
+
+    <table id="protocolTable">
+        <thead>
+            <tr>
+                <th>Source/Destination</th>
+                <th>Protocol</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for count in source_counts %}
+            <tr>
+                <td>{{ count.src }}</td>
+                <td>{{ count.Protocol }}</td>
+                <td>{{ count.count }}</td>
+            </tr>
+            {% endfor %}
+            {% for count in destination_counts %}
+            <tr>
+                <td>{{ count.dst }}</td>
+                <td>{{ count.Protocol }}</td>
+                <td>{{ count.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        document.getElementById("showTableButton").addEventListener("click", function() {
+            const table = document.getElementById("protocolTable");
+            table.style.display = table.style.display === "none" ? "table" : "none";
+        });
+    </script>
+              <!-- Button to visualize the heatmap -->
+              <button id="visualizeButton" onclick="toggleHeatmap()">Visualize Heatmap</button>
             <!-- Heatmap Section -->
             <div id="plot_heatmap" class="info-section fade-in" style="display: none; margin-top: 20px;">
                 {% if plot_heatmap %}
@@ -623,8 +721,12 @@
             </ul>
             {% endif %}
         </div> 
+       
+    
+    <div id="tcp_latencies" class="info-section fade-in">
         
-        <div id="tcp_latencies" class="info-section fade-in">
+        
+
             {% if tcp_latencies %}
                 <h2>TCP Latencies</h2>
                 <p>Average Latency: {{ tcp_latencies['Average Latency'] }} seconds</p>
@@ -647,7 +749,29 @@
                 {% else %}
                     <p style="color: green;">No Outliers found.</p>
                 {% endif %}
-            
+                <button id="toggleTCPFlagAnalysisButton" onclick="toggleTCPAnalysis()">Flag Analysis</button>
+                <div id="TCPFlagAnalysis" class="info-section fade-in">
+                    {% if tcp_flags_analysis %}
+                        <h2>TCP Flags Analysis</h2>
+                        <p><strong>Total Connections:</strong> {{ tcp_flags_analysis['total_connections'] }}</p>
+                        <p><strong>Successful Connections:</strong> {{ tcp_flags_analysis['successful_connections'] }}</p>
+                        <p><strong>Failed Connections:</strong> {{ tcp_flags_analysis['failed_connections'] }}</p>
+                        <p><strong>Reset Connections:</strong> {{ tcp_flags_analysis['reset_connections'] }}</p>
+                        <p><strong>Incomplete Connections:</strong> {{ tcp_flags_analysis['incomplete_connections'] }}</p>
+                
+                        {% if tcp_flags_analysis['suspicious_patterns'] %}
+                            <h3>Suspicious Patterns Detected:</h3>
+                            <ul>
+                                {% for pattern in tcp_flags_analysis['suspicious_patterns'] %}
+                                    <li>Source IP: {{ pattern.src }} - Destination IP: {{ pattern.dst }} - Pattern: {{ pattern.pattern }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p>No suspicious patterns detected.</p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+           
         </div>
         
         <div id="Window Size Analysis" class="info-section fade-in">
