@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from scapy.all import rdpcap, IP, TCP, UDP, Ether, IPv6
+from kamene.all import rdpcap, IP, TCP, UDP, Ether, IPv6
 import pandas as pd
 import numpy as np
 import pytz
